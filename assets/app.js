@@ -174,18 +174,24 @@
   var term = document.getElementById('term-body');
   if (term && !RM) {
     var LINES = [
+      ['$ git clone https://github.com/sricharan996/hydra.git', 'cmd'],
+      ['Cloning into \'hydra\'...', 'out'],
+      ['remote: Enumerating objects: 391, done.', 'out'],
+      ['Receiving objects: 100% (391/391), 1.14 MiB | 16.9 MiB/s, done.', 'out'],
+      ['$ cd hydra && bash setup.sh', 'cmd'],
+      ['   \ud83d\udc09 HYDRA \u2014 AI BUG BOUNTY SYSTEM SETUP', 'ok'],
+      ['[*] opencode not found \u2014 installing automatically...', 'out'],
+      ['[\u2713] opencode installed: 1.18.21', 'ok'],
+      ['[*] Installing agents, skills, methodology -> ~/.config/opencode', 'out'],
+      ['[*] Rendering opencode.jsonc with your identity', 'out'],
+      ['[*] Creating recon workspace + helper scripts', 'out'],
+      [' \u2705 HYDRA IS INSTALLED', 'done'],
+      ['$ source ~/.bashrc', 'cmd'],
+      ['$ export OPENROUTER_API_KEY=sk-or-...', 'cmd'],
       ['$ opencode', 'cmd'],
-      ['> /hunt testphp.vulnweb.com', 'cmd'],
       ['', 'out'],
-      ['[recon] resolving target… 3 subdomains · nginx/1.18 · PHP', 'out'],
-      ['[recon] CDN check: origin direct — safe to scan', 'ok'],
-      ['[hunter] probing 47 endpoints ……………… 6 leads saved', 'out'],
-      ['[hunter] lead #3: /search.php?q= reflected payload survives encode', 'warn'],
-      ['[verifier] replay ×3 · baseline diff · confidence 92%', 'ok'],
-      ['[verifier] ✓ VERIFIED — Reflected XSS (CWE-79) CVSS 6.1', 'ok'],
-      ['[reporter] BUGBASE_2026_reflected_xss_testphp.md written', 'out'],
-      ['', 'out'],
-      ['done in 4m 12s · 1 verified finding · report ready to submit', 'done']
+      ['> /hunt example.com          # authorized targets only', 'warn'],
+      ['seven heads activated \u00b7 happy hunting', 'done']
     ];
     var li = 0, ci = 0, started = false;
     function typeStep() {
