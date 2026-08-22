@@ -1,210 +1,181 @@
-/* HYDRA site interactions v2 */
+/* HYDRA site interactions v3 — true-3D hero */
 (function () {
   'use strict';
-  const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ================= HYDRA HEADS CANVAS ================= */
-  /* One core + 7 orbiting agent heads, linked by pulsing tendrils.
-     Heads drift toward the cursor — the system reacts to you.       */
-  /* ================= copy buttons ================= */
-  document.querySelectorAll('[data-copy]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const src = document.querySelector(btn.getAttribute('data-copy'));
-      navigator.clipboard.writeText(src.innerText.trim()).then(() => {
-        const old = btn.textContent;
-        btn.textContent = '✓ copied';
-        setTimeout(() => btn.textContent = old, 1400);
-      });
-    });
-  });
-
-  /* ================= reveal + stagger ================= */
-  const io = new IntersectionObserver(es => es.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); }
-  }), { threshold: .12 });
-  document.querySelectorAll('.rv').forEach((el, i) => {
-    el.style.transitionDelay = (i % 4) * 60 + 'ms';
-    io.observe(el);
-  });
-
-  /* ================= stat counters ================= */
-  const cio = new IntersectionObserver(es => es.forEach(e => {
-    if (!e.isIntersecting) return;
-    cio.unobserve(e.target);
-    const end = +e.target.dataset.count, el = e.target, t0 = performance.now();
-    (function step(now) {
-      const k = Math.min(1, (now - t0) / 1100);
-      el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3)));
-      if (k < 1) requestAnimationFrame(step);
-    })(t0);
-  }), { threshold: .6 });
-  document.querySelectorAll('[data-count]').forEach(el => cio.observe(el));
-
-  /* ================= pipeline sequential glow ================= */
-  const pio = new IntersectionObserver(es => es.forEach(e => {
-    if (!e.isIntersecting) return;
-    pio.unobserve(e.target);
-    e.target.querySelectorAll('.flow-node').forEach((n, i) =>
-      setTimeout(() => { n.classList.add('lit'); setTimeout(() => n.classList.remove('lit'), 1600); }, 500 + i * 550));
-  }), { threshold: .35 });
-  const fl = document.querySelector('.flow');
-  if (fl) pio.observe(fl);
-
-  /* ================= terminal demo typer ================= */
-  /* ================= active nav + year ================= */
-  const here = location.pathname.split('/').pop() || 'index.html';
-  document.querySelectorAll('.nav-links a').forEach(a => {
-    if (a.getAttribute('href') === here || (here.startsWith('index') && (a.getAttribute('href') || '').indexOf('index') === 0)) a.classList.add('active');
-  });
-  const y = document.getElementById('yr');
-  if (y) y.textContent = new Date().getFullYear();
-})();
-
-/* ================= isolated enhancements (cannot block content) ================= */
-try {
-(function(){
-const cv = document.getElementById('fx');
+  /* ================= 3D HERO STRUCTURE =================
+     A slowly rotating point-cloud "hydra core": three nested shells
+     of points + orbiting head nodes, perspective-projected with
+     depth shading. Mouse position tilts the whole structure.      */
+  var cv = document.getElementById('fx');
   if (cv && !RM) {
-    const ctx = cv.getContext('2d');
-    let W, H, raf, t = 0;
-    const mouse = { x: .5, y: .42 };
-    const HEADS = [
-      { n: 'RECON',    c: '#00cc66' }, { n: 'HUNT', c: '#ff4444' },
-      { n: 'VERIFY',   c: '#ffaa00' }, { n: 'REPORT', c: '#00aaff' },
-      { n: 'PLAN',     c: '#00ff88' }, { n: 'AUDIT', c: '#ff8800' },
-      { n: 'DEBUG',    c: '#ff00ff' }
-    ];
-    function size() {
-      const r = cv.getBoundingClientRect();
-      W = cv.width = Math.max(1, Math.round(r.width * devicePixelRatio));
-      H = cv.height = Math.max(1, Math.round(r.height * devicePixelRatio));
+    var ctx = cv.getContext('2d');
+    var W = 0, H = 0, raf = 0, t = 0, frames = 0;
+    var lastW = 0, lastH = 0;
+    var mouse = { x: 0.5, y: 0.42, tx: 0.5, ty: 0.42 };
+
+    // --- build 3D point cloud once ---
+    var pts = [];
+    var SHELLS = [ { r: 1.00, n: 90 }, { r: 0.62, n: 50 }, { r: 0.30, n: 22 } ];
+    for (var s = 0; s < SHELLS.length; s++) {
+      var sh = SHELLS[s], golden = Math.PI * (3 - Math.sqrt(5));
+      for (var i = 0; i < sh.n; i++) {
+        var y = 1 - (i / (sh.n - 1)) * 2;
+        var rad = Math.sqrt(Math.max(0, 1 - y * y));
+        var th = golden * i;
+        pts.push({
+          x: Math.cos(th) * rad * sh.r,
+          y: y * sh.r,
+          z: Math.sin(th) * rad * sh.r,
+          w: sh.r === 1 ? 0.5 : (sh.r === 0.62 ? 0.75 : 1.15)
+        });
+      }
     }
-    let lastW = 0, lastH = 0;
+    // orbiting head nodes (the seven agents)
+    var HEADS = ['RECON','HUNT','VERIFY','REPORT','PLAN','AUDIT','DEBUG'].map(function(n,i){
+      return { name:n, ang:(i/7)*Math.PI*2, r:1.35, y:(i%2?-0.35:0.35) };
+    });
+
     function ensureSize() {
-      const r = cv.getBoundingClientRect();
+      var r = cv.getBoundingClientRect();
       if (Math.abs(r.width - lastW) > 2 || Math.abs(r.height - lastH) > 2 || cv.width < 2) {
         lastW = r.width; lastH = r.height;
-        size();
+        W = cv.width = Math.max(1, Math.round(r.width * devicePixelRatio));
+        H = cv.height = Math.max(1, Math.round(r.height * devicePixelRatio));
       }
     }
-    function pos() {
-      const cx = W * (.5 + (mouse.x - .5) * .06), cy = H * (.46 + (mouse.y - .42) * .06);
-      const R = Math.min(W, H) * .30;
-      return HEADS.map((h, i) => {
-        const a = (i / 7) * Math.PI * 2 + t * .0011 + Math.sin(t * .0007 + i) * .18;
-        return { x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R * .62, h };
-      });
+
+    function project(x, y, z, cx, cy, scale) {
+      // rotate around Y (time) then X (mouse tilt)
+      var ry = t * 0.00022 + mouse.x * 1.4;
+      var rx = (mouse.y - 0.42) * 0.9;
+      var x1 = x * Math.cos(ry) - z * Math.sin(ry);
+      var z1 = x * Math.sin(ry) + z * Math.cos(ry);
+      var y1 = y * Math.cos(rx) - z1 * Math.sin(rx);
+      var z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
+      var persp = 3.2 / (3.2 + z2);              // perspective divide
+      return {
+        sx: cx + x1 * scale * persp,
+        sy: cy + y1 * scale * persp,
+        d: persp                                   // depth factor 0..~1.6
+      };
     }
+
     function tick() {
-      t += 16;
-      if ((t / 16 | 0) % 30 === 0) ensureSize();
+      frames++; t += 16;
+      if (frames % 45 === 0) ensureSize();
       ctx.clearRect(0, 0, W, H);
-      const dpr = devicePixelRatio;
-      const heads = pos();
-      const cx = W * (.5 + (mouse.x - .5) * .06), cy = H * (.46 + (mouse.y - .42) * .06);
+      var dpr = devicePixelRatio;
+      var cx = W * (0.5 + (mouse.x - 0.5) * 0.05);
+      var cy = H * (0.46 + (mouse.y - 0.42) * 0.05);
+      var scale = Math.min(W, H) * 0.30;
 
-      // ambient dust
-      for (let i = 0; i < 40; i++) {
-        const dx = ((i * 197 + t * .02 * (i % 3 + 1)) % W);
-        const dy = ((i * 131 + t * .013 * (i % 2 + 1)) % H);
-        ctx.fillStyle = 'rgba(140,170,200,.07)';
-        ctx.fillRect(dx, dy, dpr, dpr);
+      // ease mouse toward target (smooth parallax)
+      mouse.x += (mouse.tx - mouse.x) * 0.04;
+      mouse.y += (mouse.ty - mouse.y) * 0.04;
+
+      var proj = [], i, p, P;
+      for (i = 0; i < pts.length; i++) {
+        p = pts[i];
+        proj.push(project(p.x, p.y, p.z, cx, cy, scale));
+        proj[i].w = p.w;
       }
 
-      // tendrils core->heads with travelling pulses
-      heads.forEach((p, i) => {
-        ctx.strokeStyle = 'rgba(46,230,168,.14)';
-        ctx.lineWidth = dpr;
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p.x, p.y); ctx.stroke();
-        // pulse position along the line, offset per head
-        const ph = ((t * .0004) + i / 7) % 1;
-        const px = cx + (p.x - cx) * ph, py = cy + (p.y - cy) * ph;
-        ctx.beginPath(); ctx.arc(px, py, 2.2 * dpr, 0, 7);
-        ctx.fillStyle = 'rgba(46,230,168,' + (.75 * Math.sin(ph * Math.PI)).toFixed(2) + ')';
-        ctx.fill();
-      });
+      // connections between close points (3D distance approx via projected pairs)
+      var D = scale * 0.34;
+      for (i = 0; i < proj.length; i++) {
+        for (var j = i + 1; j < proj.length; j++) {
+          var dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, dz = pts[i].z - pts[j].z;
+          if (dx*dx + dy*dy + dz*dz < 0.085) {
+            var a = Math.min(proj[i].d, proj[j].d);
+            ctx.strokeStyle = 'rgba(46,230,168,' + (0.16 * a).toFixed(3) + ')';
+            ctx.lineWidth = dpr * 0.7;
+            ctx.beginPath();
+            ctx.moveTo(proj[i].sx, proj[i].sy);
+            ctx.lineTo(proj[j].sx, proj[j].sy);
+            ctx.stroke();
+          }
+        }
+      }
 
-      // faint ring between neighbours
-      ctx.strokeStyle = 'rgba(88,166,255,.08)';
-      ctx.beginPath();
-      heads.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
-      ctx.closePath(); ctx.stroke();
+      // points — depth-sorted feel via alpha+size by perspective
+      for (i = 0; i < proj.length; i++) {
+        P = proj[i];
+        var sz = P.w * P.d * 2.1 * dpr;
+        ctx.fillStyle = 'rgba(120,255,205,' + Math.min(1, 0.25 + P.d * 0.55).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(P.sx, P.sy, sz, 0, 7); ctx.fill();
+      }
 
-      // core
-      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 26 * dpr);
-      cg.addColorStop(0, 'rgba(46,230,168,.9)'); cg.addColorStop(1, 'rgba(46,230,168,0)');
+      // glowing core at center
+      var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 24 * dpr);
+      cg.addColorStop(0, 'rgba(46,230,168,.95)');
+      cg.addColorStop(1, 'rgba(46,230,168,0)');
       ctx.fillStyle = cg;
-      ctx.beginPath(); ctx.arc(cx, cy, 26 * dpr, 0, 7); ctx.fill();
-      ctx.fillStyle = '#eafff6';
-      ctx.beginPath(); ctx.arc(cx, cy, 4.5 * dpr, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 24 * dpr, 0, 7); ctx.fill();
 
-      // heads
-      heads.forEach(p => {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 16 * dpr);
-        g.addColorStop(0, p.h.c); g.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.globalAlpha = .85;
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 16 * dpr, 0, 7); ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.font = `${10 * dpr}px JetBrains Mono, monospace`;
-        ctx.fillStyle = 'rgba(147,161,179,.75)';
+      // orbiting agent heads — same projection math
+      for (i = 0; i < HEADS.length; i++) {
+        var hd = HEADS[i];
+        hd.ang += 0.0016;
+        var hx = Math.cos(hd.ang) * hd.r, hz = Math.sin(hd.ang) * hd.r;
+        var hp = project(hx, hd.y + Math.sin(t*0.0008+i)*0.12, hz, cx, cy, scale);
+        var g2 = ctx.createRadialGradient(hp.sx, hp.sy, 0, hp.sx, hp.sy, 14*dpr*hp.d);
+        g2.addColorStop(0, 'rgba(88,166,255,.9)');
+        g2.addColorStop(1, 'rgba(88,166,255,0)');
+        ctx.globalAlpha = Math.min(1, hp.d * 0.8);
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(hp.sx, hp.sy, 14 * dpr * hp.d, 0, 7); ctx.fill();
+        ctx.font = (10*dpr)+'px JetBrains Mono, monospace';
+        ctx.fillStyle = 'rgba(147,161,179,'+(0.35+hp.d*0.35).toFixed(2)+')';
         ctx.textAlign = 'center';
-        ctx.fillText(p.h.n, p.x, p.y + 26 * dpr);
-      });
+        ctx.fillText(hd.name, hp.sx, hp.sy + 24*dpr*hp.d);
+        ctx.globalAlpha = 1;
+      }
 
       raf = requestAnimationFrame(tick);
     }
-    cv.parentElement.addEventListener('mousemove', e => {
-      const r = cv.getBoundingClientRect();
-      mouse.x = (e.clientX - r.left) / r.width;
-      mouse.y = (e.clientY - r.top) / r.height;
-    });
-    ensureSize(); size(); tick();
-    setTimeout(ensureSize, 60); setTimeout(ensureSize, 300); setTimeout(ensureSize, 900);
-    addEventListener('resize', () => { cancelAnimationFrame(raf); ensureSize(); size(); tick(); });
-  }
-})();
-} catch(e) { console.warn('fx skipped:', e); }
 
-try {
-(function(){
-const term = document.getElementById('term-body');
-  if (term && !RM) {
-    const LINES = [
-      ['$ opencode', 'cmd'],
-      ['> /hunt testphp.vulnweb.com', 'cmd'],
-      ['', 'out'],
-      ['[recon] resolving target… 3 subdomains · nginx/1.18 · PHP', 'out'],
-      ['[recon] CDN check: origin direct — safe to scan', 'ok'],
-      ['[hunter] probing 47 endpoints ……………… 6 leads saved', 'out'],
-      ['[hunter] lead #3: /search.php?q= reflected payload survives encode', 'warn'],
-      ['[verifier] replay ×3 · baseline diff · confidence 92%', 'ok'],
-      ['[verifier] ✓ VERIFIED — Reflected XSS (CWE-79) CVSS 6.1', 'ok'],
-      ['[reporter] BUGBASE_2026_reflected_xss_testphp.md written', 'out'],
-      ['', 'out'],
-      ['done in 4m 12s · 1 verified finding · report ready to submit', 'done']
-    ];
-    let li = 0, ci = 0, started = false;
-    function type() {
-      if (li >= LINES.length) {
-        setTimeout(() => { term.innerHTML = ''; li = 0; ci = 0; type(); }, 6000);
-        return;
-      }
-      const [txt, cls] = LINES[li];
-      if (ci === 0) {
-        const d = document.createElement('div');
-        d.className = 'tl ' + cls;
-        term.appendChild(d);
-      }
-      const cur = term.lastChild;
-      cur.textContent = txt.slice(0, ++ci);
-      if (ci >= txt.length) { li++; ci = 0; setTimeout(type, cls === 'cmd' ? 420 : 130); }
-      else setTimeout(type, cls === 'cmd' ? 34 : 9);
-    }
-    const tio = new IntersectionObserver(es => es.forEach(e => {
-      if (e.isIntersecting && !started) { started = true; tio.disconnect(); setTimeout(type, 350); }
-    }), { threshold: .4 });
-    tio.observe(term.closest('.demo'));
+    cv.parentElement.addEventListener('mousemove', function(e){
+      var r = cv.getBoundingClientRect();
+      mouse.tx = (e.clientX - r.left) / r.width;
+      mouse.ty = (e.clientY - r.top) / r.height;
+    });
+    cv.parentElement.addEventListener('mouseleave', function(){
+      mouse.tx = 0.5; mouse.ty = 0.42;
+    });
+
+    ensureSize(); tick();
+    setTimeout(ensureSize, 80); setTimeout(ensureSize, 400); setTimeout(ensureSize, 1000);
+    window.addEventListener('resize', function(){ cancelAnimationFrame(raf); ensureSize(); });
   }
+
+  /* ================= copy buttons ================= */
+  document.querySelectorAll('[data-copy]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var src = document.querySelector(btn.getAttribute('data-copy'));
+      navigator.clipboard.writeText(src.innerText.trim()).then(function(){
+        var old = btn.textContent;
+        btn.textContent = '✓ copied';
+        setTimeout(function(){ btn.textContent = old; }, 1400);
+      });
+    });
+  });
+
+  /* ================= reveal on scroll ================= */
+  var io = new IntersectionObserver(function(es){ es.forEach(function(e){
+    if (e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); }
+  }); }, { threshold: .12 });
+  document.querySelectorAll('.rv').forEach(function(el, i){
+    el.style.transitionDelay = ((i % 4) * 60) + 'ms';
+    io.observe(el);
+  });
+
+  /* ================= active nav + year ================= */
+  var here = location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.nav-links a').forEach(function(a){
+    if (a.getAttribute('href') === here || (here.indexOf('index') === 0 && (a.getAttribute('href')||'').indexOf('index') === 0))
+      a.classList.add('active');
+  });
+  var y = document.getElementById('yr');
+  if (y) y.textContent = new Date().getFullYear();
 })();
-} catch(e) { console.warn('demo skipped:', e); }
