@@ -170,6 +170,46 @@
     io.observe(el);
   });
 
+  /* ================= terminal demo typer ================= */
+  var term = document.getElementById('term-body');
+  if (term && !RM) {
+    var LINES = [
+      ['$ opencode', 'cmd'],
+      ['> /hunt testphp.vulnweb.com', 'cmd'],
+      ['', 'out'],
+      ['[recon] resolving target… 3 subdomains · nginx/1.18 · PHP', 'out'],
+      ['[recon] CDN check: origin direct — safe to scan', 'ok'],
+      ['[hunter] probing 47 endpoints ……………… 6 leads saved', 'out'],
+      ['[hunter] lead #3: /search.php?q= reflected payload survives encode', 'warn'],
+      ['[verifier] replay ×3 · baseline diff · confidence 92%', 'ok'],
+      ['[verifier] ✓ VERIFIED — Reflected XSS (CWE-79) CVSS 6.1', 'ok'],
+      ['[reporter] BUGBASE_2026_reflected_xss_testphp.md written', 'out'],
+      ['', 'out'],
+      ['done in 4m 12s · 1 verified finding · report ready to submit', 'done']
+    ];
+    var li = 0, ci = 0, started = false;
+    function typeStep() {
+      if (li >= LINES.length) {
+        setTimeout(function(){ term.innerHTML=''; li=0; ci=0; typeStep(); }, 6000);
+        return;
+      }
+      var txt = LINES[li][0], cls = LINES[li][1];
+      if (ci === 0) {
+        var d = document.createElement('div');
+        d.className = 'tl ' + cls;
+        term.appendChild(d);
+      }
+      var cur = term.lastChild;
+      cur.textContent = txt.slice(0, ++ci);
+      if (ci >= txt.length) { li++; ci = 0; setTimeout(typeStep, cls === 'cmd' ? 420 : 130); }
+      else setTimeout(typeStep, cls === 'cmd' ? 34 : 9);
+    }
+    var tio = new IntersectionObserver(function(es){ es.forEach(function(e){
+      if (e.isIntersecting && !started){ started = true; tio.disconnect(); setTimeout(typeStep, 350); }
+    }); }, { threshold: .4 });
+    tio.observe(term.closest('.demo'));
+  }
+
   /* ================= active nav + year ================= */
   var here = location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-links a').forEach(function(a){
