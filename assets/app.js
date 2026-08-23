@@ -234,6 +234,17 @@
   var starBtns = document.querySelectorAll('#stars button');
   var rating = 0, note = document.getElementById('rate-note'), sub = document.getElementById('rate-submit');
   var NOTES = {1:'rough — needs work',2:'has potential',3:'decent',4:'really good',5:'excellent — star it ⭐'};
+  try {
+    var mine = JSON.parse(localStorage.getItem('hydra_rating')||'null');
+    if (mine && mine.r >= 1) {
+      setTimeout(function(){
+        rating = mine.r;
+        starBtns.forEach(function(x,k){ x.classList.toggle('on', k < mine.r); });
+        if (mine.c) document.getElementById('rate-comment').value = mine.c;
+        note.textContent = '\u2713 your saved rating: ' + mine.r + '/5';
+      }, 100);
+    }
+  } catch(e){}
   if (starBtns.length) {
     starBtns.forEach(function(b, i){
       b.addEventListener('click', function(){
@@ -253,13 +264,19 @@
     sub.addEventListener('click', function(ev){
       if (!rating) { ev.preventDefault(); note.textContent = 'select a star rating first ↑'; return; }
       var cmt = (document.getElementById('rate-comment').value || '').trim();
-      var body = '★ Rating: ' + rating + '/5\n\n' + (cmt || '(no comment)') +
+      // 1. save locally instantly
+      try {
+        localStorage.setItem('hydra_rating', JSON.stringify({r:rating,c:cmt,t:Date.now()}));
+      } catch(e){}
+      note.textContent = '\u2713 saved \u2014 your rating: ' + rating + '/5';
+      // 2. offer public post (opens prefilled discussion)
+      var body = '\u2605 Rating: ' + rating + '/5\n\n' + (cmt || '(no comment)') +
                  '\n\n--- submitted via site rating widget';
       ev.preventDefault();
       window.open('https://github.com/sricharan996/hydra/discussions/new?category=announcements' +
         '&title=' + encodeURIComponent('Review: ' + rating + '/5 stars') +
         '&body=' + encodeURIComponent(body), '_blank');
-      note.textContent = 'opened GitHub — post it to count ✦';
+      sub.textContent = '\u2713 saved \u00b7 posted to GitHub \u2713';
     });
   }
 
