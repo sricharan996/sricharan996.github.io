@@ -300,6 +300,30 @@
       }).catch(function(){});
   } catch(e) {}
 
+  /* ================= stat counters ================= */
+  var cio = new IntersectionObserver(function(es){ es.forEach(function(e){
+    if (!e.isIntersecting) return;
+    cio.unobserve(e.target);
+    var el = e.target, end = +el.getAttribute('data-count'), t0 = performance.now();
+    (function step(now){
+      var k = Math.min(1, (now - t0) / 1100);
+      el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(step);
+    })(t0);
+  }); }, { threshold: .6 });
+  document.querySelectorAll('[data-count]').forEach(function(el){ cio.observe(el); });
+
+  /* ================= pipeline sequential glow ================= */
+  var pio = new IntersectionObserver(function(es){ es.forEach(function(e){
+    if (!e.isIntersecting) return;
+    pio.unobserve(e.target);
+    e.target.querySelectorAll('.flow-node').forEach(function(n, i){
+      setTimeout(function(){ n.classList.add('lit'); setTimeout(function(){ n.classList.remove('lit'); }, 1600); }, 500 + i * 550);
+    });
+  }); }, { threshold: .35 });
+  var fl = document.querySelector('.flow');
+  if (fl) pio.observe(fl);
+
   /* ================= active nav + year ================= */
   var here = location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-links a').forEach(function(a){
