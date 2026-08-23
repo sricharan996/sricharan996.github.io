@@ -216,6 +216,20 @@
     tio.observe(term.closest('.demo'));
   }
 
+  /* ================= 3D tilt on agent cards ================= */
+  document.querySelectorAll('.agent-grid .acard').forEach(function(card){
+    card.addEventListener('pointermove', function(e){
+      var r = card.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width - 0.5;
+      var py = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = 'perspective(900px) rotateY(' + (px*10).toFixed(2) +
+        'deg) rotateX(' + (-py*8).toFixed(2) + 'deg) translateY(-2px)';
+    });
+    card.addEventListener('pointerleave', function(){
+      card.style.transform = '';
+    });
+  });
+
   /* ================= active nav + year ================= */
   var here = location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-links a').forEach(function(a){
