@@ -230,6 +230,59 @@
     });
   });
 
+  /* ================= rate HYDRA (stars → GitHub discussion) ================= */
+  var starBtns = document.querySelectorAll('#stars button');
+  var rating = 0, note = document.getElementById('rate-note'), sub = document.getElementById('rate-submit');
+  var NOTES = {1:'rough — needs work',2:'has potential',3:'decent',4:'really good',5:'excellent — star it ⭐'};
+  if (starBtns.length) {
+    starBtns.forEach(function(b, i){
+      b.addEventListener('click', function(){
+        rating = i + 1;
+        starBtns.forEach(function(x, k){ x.classList.toggle('on', k < rating); });
+        note.textContent = NOTES[rating];
+      });
+      b.addEventListener('mouseenter', function(){
+        starBtns.forEach(function(x, k){ x.classList.toggle('on', k <= i); });
+      });
+    });
+    document.getElementById('stars').addEventListener('mouseleave', function(){
+      starBtns.forEach(function(x, k){ x.classList.toggle('on', k < rating); });
+    });
+  }
+  if (sub) {
+    sub.addEventListener('click', function(ev){
+      if (!rating) { ev.preventDefault(); note.textContent = 'select a star rating first ↑'; return; }
+      var cmt = (document.getElementById('rate-comment').value || '').trim();
+      var body = '★ Rating: ' + rating + '/5\n\n' + (cmt || '(no comment)') +
+                 '\n\n--- submitted via site rating widget';
+      ev.preventDefault();
+      window.open('https://github.com/sricharan996/hydra/discussions/new?category=announcements' +
+        '&title=' + encodeURIComponent('Review: ' + rating + '/5 stars') +
+        '&body=' + encodeURIComponent(body), '_blank');
+      note.textContent = 'opened GitHub — post it to count ✦';
+    });
+  }
+
+  // live stats from public GitHub API (keyless; silent-fail)
+  try {
+    fetch('https://api.github.com/repos/sricharan996/hydra/discussions?per_page=50')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(ds){
+        if (!ds) return;
+        var n = 0, stars = 0, up = 0;
+        ds.forEach(function(d){
+          n++;
+          up += d.upvote_count || 0;
+          var m = (d.body||'').match(/★ Rating:\s*([1-5])\/5/);
+          if (m) stars += +m[1];
+        });
+        var rated = ds.filter(function(d){ return /★ Rating:\s*[1-5]\/5/.test(d.body||''); }).length;
+        document.getElementById('rs-count').textContent = n;
+        document.getElementById('rs-up').textContent = up;
+        document.getElementById('rs-avg').textContent = rated ? (stars/rated).toFixed(1) + '\u2605' : '–';
+      }).catch(function(){});
+  } catch(e) {}
+
   /* ================= active nav + year ================= */
   var here = location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-links a').forEach(function(a){
