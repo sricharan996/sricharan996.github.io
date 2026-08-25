@@ -324,6 +324,16 @@
   var fl = document.querySelector('.flow');
   if (fl) pio.observe(fl);
 
+  /* ================= review scorecard bars ================= */
+  var bio = new IntersectionObserver(function(es){ es.forEach(function(e){
+    if (!e.isIntersecting) return;
+    bio.unobserve(e.target);
+    e.target.querySelectorAll('.bar i').forEach(function(b, i){
+      setTimeout(function(){ b.style.width = b.getAttribute('data-w') + '%'; }, i * 120);
+    });
+  }); }, { threshold: .4 });
+  document.querySelectorAll('.rev-score').forEach(function(el){ bio.observe(el); });
+
   /* ================= active nav + year ================= */
   var here = location.pathname.split('/').pop() || 'index.html';
   document.querySelectorAll('.nav-links a').forEach(function(a){
