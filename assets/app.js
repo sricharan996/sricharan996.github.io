@@ -149,6 +149,28 @@
     window.addEventListener('resize', function(){ cancelAnimationFrame(raf); ensureSize(); });
   }
 
+
+  /* ================= matrix rain (features bg) ================= */
+  var mx = document.getElementById('mx');
+  if (mx && !RM) {
+    var mctx = mx.getContext('2d');
+    var cols = [], MW, MH, GLYPHS = '01<>/{}$#;=λ*';
+    function msize(){ MW = mx.width = mx.offsetWidth * devicePixelRatio; MH = mx.height = mx.offsetHeight * devicePixelRatio;
+      cols = Array(Math.floor(MW / (14*devicePixelRatio))).fill(0).map(()=>Math.random()*MH); }
+    function mdraw(){
+      mctx.fillStyle = 'rgba(10,14,19,.09)'; mctx.fillRect(0,0,MW,MH);
+      mctx.font = (13*devicePixelRatio)+'px JetBrains Mono, monospace';
+      cols.forEach(function(y,i){
+        var ch = GLYPHS[Math.floor(Math.random()*GLYPHS.length)];
+        mctx.fillStyle = Math.random()<.06 ? 'rgba(231,238,245,.85)' : 'rgba(46,230,168,.5)';
+        mctx.fillText(ch, i*14*devicePixelRatio, y);
+        cols[i] = y > MH + Math.random()*400 ? 0 : y + 14*devicePixelRatio;
+      });
+    }
+    msize(); setInterval(mdraw, 66);
+    window.addEventListener('resize', msize);
+  }
+
   /* ================= copy buttons ================= */
   document.querySelectorAll('[data-copy]').forEach(function(btn){
     btn.addEventListener('click', function(){

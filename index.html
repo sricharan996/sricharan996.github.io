@@ -31,6 +31,8 @@
       <a href="skills.html">Skills</a>
       <a href="index.html#start">Get Started</a>
       <a href="index.html#reviews">Reviews</a>
+      <a href="index.html#roadmap">Roadmap</a>
+      <a href="index.html#about">About
       <a href="index.html#faq">FAQ</a>
     </div>
     <a class="nav-gh keep" href="https://github.com/sricharan996/hydra" target="_blank" rel="noopener">
@@ -44,7 +46,7 @@
   <canvas id="fx"></canvas>
   <div class="hero-in">
     <span class="kicker"><span class="dot"></span> OPEN SOURCE · v1.0 · MIT LICENSE</span>
-    <h1 class="title">HYDRA</h1>
+    <h1 class="title glitch" data-text="HYDRA">HYDRA</h1>
     <p class="tagline">Seven AI agents that hunt software bugs as a team — from first recon scan to a <b>submission-ready vulnerability report</b>. You stay in control; they do the grinding.</p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="#start">Get Started</a>
@@ -204,8 +206,9 @@
 </section>
 
 
-<section>
-  <div class="wrap">
+<section style="position:relative;overflow:hidden">
+  <canvas id="mx"></canvas>
+  <div class="wrap" style="position:relative;z-index:1">
     <div class="sec-head rv">
       <span class="sec-kicker">v0.3 feature drop</span>
       <h2>Built for autonomous warfare</h2>
@@ -329,47 +332,6 @@
 </section>
 
 
-<section id="rate">
-  <div class="wrap">
-    <div class="sec-head rv" style="text-align:center;margin-left:auto;margin-right:auto">
-      <span class="sec-kicker">Visitor rating</span>
-      <h2>Rate HYDRA</h2>
-      <p class="sec-sub">Tried it? Leave a rating — submissions land publicly in the repo's discussions, so everything stays honest.</p>
-    </div>
-    <div class="rate-wrap rv">
-      <div class="stars" id="stars">
-        <button aria-label="1 star">★</button><button aria-label="2 stars">★</button><button aria-label="3 stars">★</button><button aria-label="4 stars">★</button><button aria-label="5 stars">★</button>
-      </div>
-      <div class="rate-note" id="rate-note">click to select a rating</div>
-      <textarea id="rate-comment" placeholder="Optional: what worked, what broke, what's missing…"></textarea>
-      <div class="rate-actions">
-        <a class="btn btn-primary" id="rate-submit" href="#">💾 Save & post to GitHub ↗</a>
-        <span style="font-size:12px;color:var(--faint)">saves here instantly · public copy goes to discussions</span>
-      </div>
-      <p style="margin-top:26px;font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:1px">PUBLIC REVIEWS — SIGN IN WITH GITHUB TO POST</p>
-      <script src="https://giscus.app/client.js"
-        data-repo="sricharan996/hydra"
-        data-repo-id="R_kgDOT_4isQ"
-        data-category="Announcements"
-        data-category-id="DIC_kwDOT_4isc4DD_31"
-        data-mapping="specific"
-        data-term="💬 Reviews & Feedback — post yours here"
-        data-reactions-enabled="1"
-        data-emit-metadata="0"
-        data-theme="dark_dimmed"
-        data-lang="en"
-        crossorigin="anonymous"
-        async>
-      </script>
-      <div class="rate-stats">
-        <div><b id="rs-count">–</b><span>reviews</span></div>
-        <div><b id="rs-avg">–</b><span>avg rating</span></div>
-        <div><b id="rs-up">–</b><span>👍 votes</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <section class="plain" id="faq">
   <div class="wrap">
     <div class="sec-head rv">
@@ -383,6 +345,53 @@
       <details class="rv"><summary>What makes this different from just using ChatGPT?</summary><div class="a">ChatGPT gives advice; HYDRA executes. It runs real scanners against real targets, keeps per-agent memory across sessions, enforces verification discipline, and produces reports in exact platform format. It's a workflow with guards, not a chat window.</div></details>
       <details class="rv"><summary>Can it break my computer or leak my data?</summary><div class="a">Findings and reports stay in ~/recon_reports on your machine. The repo's CI blocks secret-shaped content from ever being committed, and GitHub push protection is enabled. As with any tool that executes commands, read what it runs — that habit will serve you well beyond HYDRA.</div></details>
       <details class="rv"><summary>What if an agent gets stuck or hallucinates?</summary><div class="a">All seven agents carry a Self-Rescue Protocol: when confused, they fire parallel web searches, fetch primary documentation, cross-verify two independent sources, and log the knowledge gap — instead of guessing confidently. The Debug agent turns every recovered mistake into a permanent prevention rule.</div></details>
+    </div>
+  </div>
+</section>
+
+
+<section id="about">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-kicker">About</span>
+      <h2>Who builds HYDRA</h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-card rv">
+        <div class="avatar">🐉</div>
+        <h3>sricharan996</h3>
+        <p class="role">Bug bounty hunter · AI-security builder</p>
+        <p>I got tired of running the same recon commands at 2 AM and losing verified findings to sloppy reports. So I built the team I wanted: agents that grind, a gate that kills false positives, and a memory that never forgets a lesson.</p>
+        <p>HYDRA is MIT-licensed and free forever. If it helps you land your first critical — star the repo and pass it on.</p>
+        <div class="socials">
+          <a href="https://github.com/sricharan996" target="_blank" rel="noopener">GitHub ↗</a>
+          <a href="https://github.com/sricharan996/hydra/discussions/1" target="_blank" rel="noopener">Discussions ↗</a>
+        </div>
+      </div>
+      <div class="about-facts rv">
+        <div class="fact"><b>989</b><span>skill modules curated</span></div>
+        <div class="fact"><b>7</b><span>agents in the rotation</span></div>
+        <div class="fact"><b>35</b><span>automation tools shipped</span></div>
+        <div class="fact"><b>∞</b><span>loop mode uptime</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="plain" id="roadmap">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-kicker">Upcoming</span>
+      <h2>The road ahead</h2>
+      <p class="sec-sub">What the next releases are grinding toward — pulled straight from our external review roadmap.</p>
+    </div>
+    <div class="roadmap">
+      <div class="ritem rv"><span class="tag now">NOW</span><div><b>Evaluation suite</b><p>Deliberately vulnerable test apps proving Hunter→Verifier catches exactly what it claims — measured, not promised.</p></div></div>
+      <div class="ritem rv"><span class="tag now">NOW</span><div><b>Capability tiers</b><p>PASSIVE → SAFE_ACTIVE → INTRUSIVE permission levels enforced by the runtime, not by prompt politeness.</p></div></div>
+      <div class="ritem rv"><span class="tag next">NEXT</span><div><b>Finding database UI</b><p>SQLite-backed: dedup by hash, CVSS queries, one-click BugBase export.</p></div></div>
+      <div class="ritem rv"><span class="tag next">NEXT</span><div><b>Skill router</b><p>Context-aware top-5 selection from the 989-module library — right skill, right moment.</p></div></div>
+      <div class="ritem rv"><span class="tag later">LATER</span><div><b>HYDRA runtime</b><p>Own agent runtime beyond the opencode engine — typed agent protocol, native sandboxing.</p></div></div>
+      <div class="ritem rv"><span class="tag later">LATER</span><div><b>Community skill forge</b><p>Submit, rate and route community skills through the same additive-sync pipeline.</p></div></div>
     </div>
   </div>
 </section>
