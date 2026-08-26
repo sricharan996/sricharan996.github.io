@@ -3,172 +3,132 @@
   'use strict';
   var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ================= 3D HERO STRUCTURE =================
-     A slowly rotating point-cloud "hydra core": three nested shells
-     of points + orbiting head nodes, perspective-projected with
-     depth shading. Mouse position tilts the whole structure.      */
+  /* ================= 🐉 SERPENT HYDRA ENGINE =================
+     Seven living necks rise from an ember core. They sway, breathe,
+     track your cursor — and every few seconds one STRIKES.          */
   var cv = document.getElementById('fx');
   if (cv && !RM) {
     var ctx = cv.getContext('2d');
-    var W = 0, H = 0, raf = 0, t = 0, frames = 0;
-    var lastW = 0, lastH = 0;
-    var mouse = { x: 0.5, y: 0.42, tx: 0.5, ty: 0.42 };
+    var W=0,H=0,raf=0,t=0,frames=0,lastW=0,lastH=0;
+    var mouse={x:.5,y:.42,tx:.5,ty:.42};
+    var NECKS=[
+      {name:'RECON', c1:[0,204,102],  c2:[46,230,168]},
+      {name:'HUNT',  c1:[255,68,68],  c2:[255,148,87]},
+      {name:'VERIFY',c1:[240,180,41], c2:[255,225,120]},
+      {name:'REPORT',c1:[0,170,255],  c2:[120,200,255]},
+      {name:'PLAN',  c1:[0,255,136],  c2:[160,255,200]},
+      {name:'AUDIT', c1:[255,136,0],  c2:[255,190,120]},
+      {name:'DEBUG', c1:[255,0,255],  c2:[230,140,255]}
+    ];
+    var SEGS=15;
 
-    // --- build 3D point cloud once ---
-    var pts = [];
-    var SHELLS = [ { r: 1.00, n: 90 }, { r: 0.62, n: 50 }, { r: 0.30, n: 22 } ];
-    for (var s = 0; s < SHELLS.length; s++) {
-      var sh = SHELLS[s], golden = Math.PI * (3 - Math.sqrt(5));
-      for (var i = 0; i < sh.n; i++) {
-        var y = 1 - (i / (sh.n - 1)) * 2;
-        var rad = Math.sqrt(Math.max(0, 1 - y * y));
-        var th = golden * i;
-        pts.push({
-          x: Math.cos(th) * rad * sh.r,
-          y: y * sh.r,
-          z: Math.sin(th) * rad * sh.r,
-          w: sh.r === 1 ? 0.5 : (sh.r === 0.62 ? 0.75 : 1.15)
-        });
-      }
+    function size(){
+      var r=cv.getBoundingClientRect();
+      W=cv.width=Math.max(1,Math.round(r.width*devicePixelRatio));
+      H=cv.height=Math.max(1,Math.round(r.height*devicePixelRatio));
     }
-    // orbiting head nodes (the seven agents)
-    var HEADS = ['RECON','HUNT','VERIFY','REPORT','PLAN','AUDIT','DEBUG'].map(function(n,i){
-      return { name:n, ang:(i/7)*Math.PI*2, r:1.35, y:(i%2?-0.35:0.35) };
-    });
-
-    function ensureSize() {
-      var r = cv.getBoundingClientRect();
-      if (Math.abs(r.width - lastW) > 2 || Math.abs(r.height - lastH) > 2 || cv.width < 2) {
-        lastW = r.width; lastH = r.height;
-        W = cv.width = Math.max(1, Math.round(r.width * devicePixelRatio));
-        H = cv.height = Math.max(1, Math.round(r.height * devicePixelRatio));
+    function ensureSize(){
+      var r=cv.getBoundingClientRect();
+      if(Math.abs(r.width-lastW)>2||Math.abs(r.height-lastH)>2||cv.width<2){
+        lastW=r.width;lastH=r.height;size();
       }
     }
 
-    function project(x, y, z, cx, cy, scale) {
-      // rotate around Y (time) then X (mouse tilt)
-      var ry = t * 0.00022 + mouse.x * 1.4;
-      var rx = (mouse.y - 0.42) * 0.9;
-      var x1 = x * Math.cos(ry) - z * Math.sin(ry);
-      var z1 = x * Math.sin(ry) + z * Math.cos(ry);
-      var y1 = y * Math.cos(rx) - z1 * Math.sin(rx);
-      var z2 = y * Math.sin(rx) + z1 * Math.cos(rx);
-      var persp = 3.2 / (3.2 + z2);              // perspective divide
-      return {
-        sx: cx + x1 * scale * persp,
-        sy: cy + y1 * scale * persp,
-        d: persp                                   // depth factor 0..~1.6
-      };
+    // strike state machine: idle → windup(300ms) → lunge(260ms) → recover(700ms)
+    var striker={neck:-1,start:0};
+    function strikeEnv(now,idx){
+      if(striker.neck!==idx) return 0;
+      var e=now-striker.start;
+      if(e<0||e>1260){striker.neck=-1;return 0;}
+      if(e<300) return -(e/300)*.18;                 // windup: pull back
+      if(e<560) return ((e-300)/260);                // lunge: extend hard
+      var r=(e-560)/700;                             // recover: ease home
+      return (1-r);
     }
 
-    function tick() {
-      frames++; t += 16;
-      if (frames % 45 === 0) ensureSize();
-      ctx.clearRect(0, 0, W, H);
-      var dpr = devicePixelRatio;
-      var cx = W * (0.5 + (mouse.x - 0.5) * 0.05);
-      var cy = H * (0.46 + (mouse.y - 0.42) * 0.05);
-      var scale = Math.min(W, H) * 0.30;
+    function tick(){
+      frames++; t+=16;
+      if(frames%45===0) ensureSize();
+      ctx.clearRect(0,0,W,H);
+      var dpr=devicePixelRatio;
+      mouse.x+=(mouse.tx-mouse.x)*.04; mouse.y+=(mouse.ty-mouse.y)*.04;
 
-      // ease mouse toward target (smooth parallax)
-      mouse.x += (mouse.tx - mouse.x) * 0.04;
-      mouse.y += (mouse.ty - mouse.y) * 0.04;
+      var cx=W*(.5+(mouse.x-.5)*.07), cy=H*(.52+(mouse.y-.42)*.07);
+      var S=Math.min(W,H)*.34;
 
-      var proj = [], i, p, P;
-      for (i = 0; i < pts.length; i++) {
-        p = pts[i];
-        proj.push(project(p.x, p.y, p.z, cx, cy, scale));
-        proj[i].w = p.w;
-      }
+      // ember core
+      var cg=ctx.createRadialGradient(cx,cy,0,cx,cy,30*dpr);
+      cg.addColorStop(0,'rgba(255,120,40,.95)');
+      cg.addColorStop(.45,'rgba(46,230,168,.55)');
+      cg.addColorStop(1,'rgba(46,230,168,0)');
+      ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,30*dpr,0,7);ctx.fill();
 
-      // connections between close points (3D distance approx via projected pairs)
-      var D = scale * 0.34;
-      for (i = 0; i < proj.length; i++) {
-        for (var j = i + 1; j < proj.length; j++) {
-          var dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, dz = pts[i].z - pts[j].z;
-          if (dx*dx + dy*dy + dz*dz < 0.085) {
-            var a = Math.min(proj[i].d, proj[j].d);
-            ctx.strokeStyle = 'rgba(46,230,168,' + (0.16 * a).toFixed(3) + ')';
-            ctx.lineWidth = dpr * 0.7;
-            ctx.beginPath();
-            ctx.moveTo(proj[i].sx, proj[i].sy);
-            ctx.lineTo(proj[j].sx, proj[j].sy);
-            ctx.stroke();
-          }
+      // choose a striker occasionally
+      if(striker.neck===-1 && Math.random()<.008)
+        striker={neck:Math.floor(Math.random()*7),start:t};
+
+      var allSegs=[];
+      for(var n=0;n<7;n++){
+        var N=NECKS[n];
+        var base=n*(Math.PI*2/7)+t*.00012;                 // slow carousel
+        var mAng=Math.atan2((mouse.y-.42),(mouse.x-.5));   // cursor attraction
+        var strike=strikeEnv(t,n);
+        var pts=[];
+        for(var s=0;s<=SEGS;s++){
+          var f=s/SEGS;
+          var sway=Math.sin(t*.0016+N.c1[0]+f*4.2)*(.38*f)*(1-Math.abs(strike));
+          var ang=base+sway+f*(mAng-base)*(.10+.55*Math.abs(strike))*f+strike*f*.9;
+          var rad=S*(.16+f*1.02);
+          var px=cx+Math.cos(ang)*rad;
+          var py=cy+Math.sin(ang)*rad*.60 - f*S*.28 + Math.sin(t*.001+n+f*3)*6*dpr*f;
+          pts.push({x:px,y:py,f:f});
+        }
+        // neck body: glowing chain, thick at base → sharp at head
+        for(s=0;s<SEGS;s++){
+          var a=pts[s],b=pts[s+1],f=a.f;
+          var mix=function(u){return Math.round(N.c1[u]+(N.c2[u]-N.c1[u])*f);};
+          ctx.strokeStyle='rgba('+mix(0)+','+mix(1)+','+mix(2)+','+(0.75-f*.35).toFixed(2)+')';
+          ctx.lineWidth=dpr*(5.5-f*4.2);
+          ctx.lineCap='round';
+          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+          allSegs.push({x:b.x,y:b.y,r:dpr*(3.4-f*2.2),c:N.c2,o:(0.8-f*.3)});
+        }
+        // the head
+        var hp=pts[SEGS];
+        var hg=ctx.createRadialGradient(hp.x,hp.y,0,hp.x,hp.y,20*dpr);
+        hg.addColorStop(0,'rgba('+N.c2[0]+','+N.c2[1]+','+N.c2[2]+',.95)');
+        hg.addColorStop(1,'rgba('+N.c2[0]+','+N.c2[1]+','+N.c2[2]+',0)');
+        ctx.fillStyle=hg;ctx.beginPath();ctx.arc(hp.x,hp.y,20*dpr,0,7);ctx.fill();
+        ctx.fillStyle='#eafff6';ctx.beginPath();ctx.arc(hp.x,hp.y,3.4*dpr,0,7);ctx.fill();
+        ctx.font=(11*dpr)+'px JetBrains Mono, monospace';
+        ctx.fillStyle='rgba(231,238,245,.92)';ctx.textAlign='center';
+        ctx.fillText(N.name,hp.x,hp.y-16*dpr);
+        // eyes blink into existence when striking
+        if(strike>0){
+          ctx.fillStyle='rgba(255,60,60,'+(strike*.9).toFixed(2)+')';
+          ctx.beginPath();ctx.arc(hp.x-3*dpr,hp.y-2*dpr,1.6*dpr,0,7);ctx.fill();
+          ctx.beginPath();ctx.arc(hp.x+3*dpr,hp.y-2*dpr,1.6*dpr,0,7);ctx.fill();
         }
       }
-
-      // points — depth-sorted feel via alpha+size by perspective
-      for (i = 0; i < proj.length; i++) {
-        P = proj[i];
-        var sz = P.w * P.d * 2.1 * dpr;
-        ctx.fillStyle = 'rgba(120,255,205,' + Math.min(1, 0.25 + P.d * 0.55).toFixed(3) + ')';
-        ctx.beginPath(); ctx.arc(P.sx, P.sy, sz, 0, 7); ctx.fill();
+      // ember sparks drifting off the core
+      for(var i=0;i<26;i++){
+        var ex=cx+Math.cos(i*2.4+t*.001)*S*.2, ey=cy+Math.sin(i*1.7+t*.0013)*S*.12;
+        ctx.fillStyle='rgba(255,150,60,'+(0.25+0.2*Math.sin(t*.004+i)).toFixed(2)+')';
+        ctx.beginPath();ctx.arc(ex,ey,dpr*1.6,0,7);ctx.fill();
       }
 
-      // glowing core at center
-      var cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 24 * dpr);
-      cg.addColorStop(0, 'rgba(46,230,168,.95)');
-      cg.addColorStop(1, 'rgba(46,230,168,0)');
-      ctx.fillStyle = cg;
-      ctx.beginPath(); ctx.arc(cx, cy, 24 * dpr, 0, 7); ctx.fill();
-
-      // orbiting agent heads — same projection math
-      for (i = 0; i < HEADS.length; i++) {
-        var hd = HEADS[i];
-        hd.ang += 0.0016;
-        var hx = Math.cos(hd.ang) * hd.r, hz = Math.sin(hd.ang) * hd.r;
-        var hp = project(hx, hd.y + Math.sin(t*0.0008+i)*0.12, hz, cx, cy, scale);
-        var g2 = ctx.createRadialGradient(hp.sx, hp.sy, 0, hp.sx, hp.sy, 14*dpr*hp.d);
-        g2.addColorStop(0, 'rgba(88,166,255,.9)');
-        g2.addColorStop(1, 'rgba(88,166,255,0)');
-        ctx.globalAlpha = Math.min(1, hp.d * 0.8);
-        ctx.fillStyle = g2;
-        ctx.beginPath(); ctx.arc(hp.sx, hp.sy, 14 * dpr * hp.d, 0, 7); ctx.fill();
-        ctx.font = (10*dpr)+'px JetBrains Mono, monospace';
-        ctx.fillStyle = 'rgba(147,161,179,'+(0.35+hp.d*0.35).toFixed(2)+')';
-        ctx.textAlign = 'center';
-        ctx.fillText(hd.name, hp.sx, hp.sy + 24*dpr*hp.d);
-        ctx.globalAlpha = 1;
-      }
-
-      raf = requestAnimationFrame(tick);
+      raf=requestAnimationFrame(tick);
     }
 
-    cv.parentElement.addEventListener('mousemove', function(e){
-      var r = cv.getBoundingClientRect();
-      mouse.tx = (e.clientX - r.left) / r.width;
-      mouse.ty = (e.clientY - r.top) / r.height;
+    cv.parentElement.addEventListener('mousemove',function(e){
+      var r=cv.getBoundingClientRect();
+      mouse.tx=(e.clientX-r.left)/r.width; mouse.ty=(e.clientY-r.top)/r.height;
     });
-    cv.parentElement.addEventListener('mouseleave', function(){
-      mouse.tx = 0.5; mouse.ty = 0.42;
-    });
+    cv.parentElement.addEventListener('mouseleave',function(){mouse.tx=.5;mouse.ty=.42;});
 
-    ensureSize(); tick();
-    setTimeout(ensureSize, 80); setTimeout(ensureSize, 400); setTimeout(ensureSize, 1000);
-    window.addEventListener('resize', function(){ cancelAnimationFrame(raf); ensureSize(); });
-  }
-
-
-  /* ================= matrix rain (features bg) ================= */
-  var mx = document.getElementById('mx');
-  if (mx && !RM) {
-    var mctx = mx.getContext('2d');
-    var cols = [], MW, MH, GLYPHS = '01<>/{}$#;=λ*';
-    function msize(){ MW = mx.width = mx.offsetWidth * devicePixelRatio; MH = mx.height = mx.offsetHeight * devicePixelRatio;
-      cols = Array(Math.floor(MW / (14*devicePixelRatio))).fill(0).map(()=>Math.random()*MH); }
-    function mdraw(){
-      mctx.fillStyle = 'rgba(10,14,19,.09)'; mctx.fillRect(0,0,MW,MH);
-      mctx.font = (13*devicePixelRatio)+'px JetBrains Mono, monospace';
-      cols.forEach(function(y,i){
-        var ch = GLYPHS[Math.floor(Math.random()*GLYPHS.length)];
-        mctx.fillStyle = Math.random()<.06 ? 'rgba(231,238,245,.85)' : 'rgba(46,230,168,.5)';
-        mctx.fillText(ch, i*14*devicePixelRatio, y);
-        cols[i] = y > MH + Math.random()*400 ? 0 : y + 14*devicePixelRatio;
-      });
-    }
-    msize(); setInterval(mdraw, 66);
-    window.addEventListener('resize', msize);
+    ensureSize();tick();
+    setTimeout(ensureSize,80);setTimeout(ensureSize,400);setTimeout(ensureSize,1000);
+    window.addEventListener('resize',function(){cancelAnimationFrame(raf);ensureSize();});
   }
 
   /* ================= copy buttons ================= */
