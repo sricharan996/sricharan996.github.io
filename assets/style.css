@@ -237,7 +237,7 @@ html.js .rv.on{opacity:1;transform:none}
 
 /* ---- v5: hacking vibes ---- */
 #mx{position:absolute;inset:0;z-index:0;opacity:.30;pointer-events:none}
-.glitch{position:relative;display:inline-block}
+.glitch{position:relative;display:block;width:fit-content;margin:0 auto}
 .glitch::before,.glitch::after{content:attr(data-text);position:absolute;inset:0;overflow:hidden}
 .glitch::before{left:2px;text-shadow:-1px 0 #ff00c1;clip-path:inset(42% 0 38% 0);animation:gl 2.4s infinite linear alternate-reverse}
 .glitch::after{left:-2px;text-shadow:-1px 0 #00fff9;clip-path:inset(12% 0 68% 0);animation:gl 3.1s infinite linear alternate}
